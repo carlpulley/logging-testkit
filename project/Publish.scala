@@ -1,4 +1,4 @@
-// Copyright 2016 Carl Pulley
+// Copyright 2016-2018 Carl Pulley
 
 import sbt.Keys._
 import sbt._

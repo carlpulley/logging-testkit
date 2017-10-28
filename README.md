@@ -1,18 +1,14 @@
-# System Testkit
+# Logging Testkit
 
 TODO:
 
-# Publishing and Release
+# Publishing and Releasing
 
 Once we have merged a set of feature branches into the `master` branch and are ready to cut a release:
 ```
-git hf release start X.Y.Z
-# Edit version.sbt so that version == X.Y.Z
-# Commit changes to the release branch
-git hf release push
-# Ensure that Travis CI passes the build
-git hf release finish X.Y.Z
-sbt clean ghpagesPushSite
+git tag -s vX.Y.Z
+git push -tags
+sbt ghpagesPushSite
 sbt "+ publishSigned"
 sbt sonatypeRelease
 ```

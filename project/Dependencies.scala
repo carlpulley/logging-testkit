@@ -1,11 +1,11 @@
-// Copyright 2016 Carl Pulley
+// Copyright 2016-2018 Carl Pulley
 
 import sbt.Keys._
 import sbt._
 
 object Dependencies {
   object akka {
-    private val version = "2.5.6"
+    private val version = "2.5.9"
 
     val actor: ModuleID = "com.typesafe.akka" %% "akka-actor" % version
     val cluster: ModuleID = "com.typesafe.akka" %% "akka-cluster" % version
@@ -23,13 +23,13 @@ object Dependencies {
   }
 
   object aws {
-    private val version = "1.11.121"
+    private val version = "1.11.263"
 
     val logs: ModuleID = "com.amazonaws" % "aws-java-sdk-logs" % version
   }
 
   object circe {
-    private val version = "0.9.0-M1"
+    private val version = "0.9.0"
 
     val core: ModuleID = "io.circe" %% "circe-core" % version
     val generic: ModuleID = "io.circe" %% "circe-generic" % version
@@ -40,7 +40,7 @@ object Dependencies {
   val config: ModuleID = "com.typesafe" % "config" % "1.3.1"
 
   object eff {
-    private val version = "4.6.1"
+    private val version = "5.0.0-RC1-20180101142835-0e4b73e"
 
     val core: ModuleID = "org.atnos" %% "eff" % version
     val monix: ModuleID = "org.atnos" %% "eff-monix" % version
@@ -55,21 +55,19 @@ object Dependencies {
     val native: ModuleID = "org.json4s" %% "json4s-native" % version
   }
 
-  val kindProjection: ModuleID = "org.spire-math" %% "kind-projector" % "0.9.4"
+  val kindProjection: ModuleID = "org.spire-math" %% "kind-projector" % "0.9.5"
   val logback: ModuleID = "ch.qos.logback" % "logback-classic" % "1.2.3"
 
   object monix {
-    private val version = "3.0.0-M1"
+    private val version = "3.0.0-668a8b9"
 
     val core: ModuleID = "io.monix" %% "monix" % version
     val reactive: ModuleID = "io.monix" %% "monix-reactive" % version
   }
 
   val pprint: ModuleID = "com.lihaoyi" %% "pprint" % "0.5.3"
-  // TODO: to avoid issues with incompatible classes, ensure compatability with scalatest
   val scalacheck: ModuleID = "org.scalacheck" %% "scalacheck" % "1.13.5"
   val scalacompiler: Def.Initialize[ModuleID] = Def.setting("org.scala-lang" % "scala-compiler" % scalaVersion.value)
-  // TODO: wait until scalatest version > 3.0.1 is released (see https://github.com/scalatest/scalatest/pull/980)
   val scalatest: ModuleID = "org.scalatest" %% "scalatest" % "3.2.0-SNAP7"
   val shapeless: ModuleID = "com.chuusai" %% "shapeless" % "2.3.2"
   val yaml: ModuleID = "net.jcazevedo" %% "moultingyaml" % "0.4.0"

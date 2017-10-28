@@ -1,4 +1,4 @@
-// Copyright 2016 Carl Pulley
+// Copyright 2016-2018 Carl Pulley
 
 import com.typesafe.sbt.SbtGit.git
 import sbt.Keys._
