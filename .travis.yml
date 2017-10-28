@@ -1,0 +1,15 @@
+language: scala
+sudo: false
+
+scala:
+  - 2.11.11
+  - 2.12.4
+
+jdk:
+  - oraclejdk8
+
+script:
+  - sbt ++$TRAVIS_SCALA_VERSION clean coverage ^compile ^test:compile ^test
+  - sbt coverageReport
+  - sbt coverageAggregate
+  - sbt codacyCoverage
