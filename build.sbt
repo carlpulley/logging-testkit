@@ -9,8 +9,6 @@ enablePlugins(SiteScaladocPlugin)
 
 Publish.settings
 
-crossSbtVersions := Vector("0.13.16", "1.1.0")
-
 git.useGitDescribe := true
 ivyLoggingLevel := UpdateLogging.Quiet
 

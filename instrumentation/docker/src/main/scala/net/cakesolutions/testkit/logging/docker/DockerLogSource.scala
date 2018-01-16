@@ -81,6 +81,15 @@ object DockerLogSource extends LoggingSource[Json] {
       }
     }
 
+  private implicit class EitherHelper[A <: Throwable, B](either: Either[A, B]) {
+    def toTry: Try[B] = either match {
+      case Right(value) =>
+        Success(value)
+      case Left(exn) =>
+        Failure(exn)
+    }
+  }
+
   private implicit class LogEventHelper(rawLine: String) {
     def toLogEvent(id: String): Try[LogEvent[Json]] = Try {
       val line = rawLine.trim
