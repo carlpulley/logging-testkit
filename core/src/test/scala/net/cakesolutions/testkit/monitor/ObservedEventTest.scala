@@ -8,7 +8,7 @@ class ObservedEventTest extends FreeSpec with Matchers with GeneratorDrivenPrope
   import TestGenerators._
 
   "StateTimeout is a Throwable instance" in {
-    forAll(stateTimeoutGen) { (timeout: StateTimeout.type) =>
+    forAll(stateTimeoutGen) { timeout =>
       timeout shouldBe a[Throwable]
     }
   }

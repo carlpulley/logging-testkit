@@ -68,7 +68,7 @@ object Dependencies {
   val pprint: ModuleID = "com.lihaoyi" %% "pprint" % "0.5.3"
   val scalacheck: ModuleID = "org.scalacheck" %% "scalacheck" % "1.13.5"
   val scalacompiler: Def.Initialize[ModuleID] = Def.setting("org.scala-lang" % "scala-compiler" % scalaVersion.value)
-  val scalatest: ModuleID = "org.scalatest" %% "scalatest" % "3.2.0-SNAP7"
+  val scalatest: ModuleID = "org.scalatest" %% "scalatest" % "3.0.4"
   val shapeless: ModuleID = "com.chuusai" %% "shapeless" % "2.3.2"
   val yaml: ModuleID = "net.jcazevedo" %% "moultingyaml" % "0.4.0"
 }
