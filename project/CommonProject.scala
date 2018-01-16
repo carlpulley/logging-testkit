@@ -48,7 +48,7 @@ object CommonProject {
       testOptions in Test += Tests.Argument("-oFD"),
       fork := true,
       fork in test := true,
-      coverageMinimum := 100,
+      coverageMinimum := 0,
       coverageFailOnMinimum := true,
       coverageExcludedFiles := ".*/target/.*"
     )
