@@ -1,7 +1,7 @@
-import Dependencies._
-import net.vonbuchholtz.sbt.dependencycheck.DependencyCheckPlugin
+// Copyright 2018 Carl Pulley
 
-enablePlugins(DependencyCheckPlugin)
+import Dependencies._
+
 //enablePlugins(GhpagesPlugin)
 enablePlugins(GitBranchPrompt)
 enablePlugins(GitVersioning)
@@ -11,7 +11,6 @@ Publish.settings
 
 crossSbtVersions := Vector("0.13.16", "1.1.0")
 
-dependencyCheckFailBuildOnCVSS := 5
 git.useGitDescribe := true
 ivyLoggingLevel := UpdateLogging.Quiet
 
