@@ -45,12 +45,14 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
         }
         case 1 => {
           case Observe("2") =>
+            Stay(Accept("stay"))
+          case Observe("3") =>
             Stop(Accept("stop"))
         }
       }
-      val events = Observable("1", "2")
+      val events = Observable("1", "2", "3")
 
-      simple.run(events) should observe(Accept("goto-1"), Accept("stop"))
+      simple.run(events) should observe(Accept("goto-1"), Accept("stay"), Accept("stop"))
     }
   }
 
@@ -75,15 +77,11 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
       "and with timeouts (global timeout)" in {
         val timed = Monitor[Int, String](0, 1.second) {
           case 0 => {
-            case Observe("1") =>
-              Goto(1)
-          }
-          case 1 => {
             case StateTimeout =>
               Stop(Accept("timeout"))
           }
         }
-        val events = Observable("1")
+        val events = Observable.never
 
         timed.run(events) should observe(Accept("timeout"))
       }
@@ -99,7 +97,7 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
               Stop(Accept("timeout"))
           }
         }
-        val events = Observable("1")
+        val events = Observable.cons("1", Observable.never)
 
         timed.run(events) should observe(Accept("timeout"))
       }
@@ -133,10 +131,52 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
               Stop(Accept("timeout"))
           }
         }
-        val events = Observable("1")
+        val events = Observable.cons("1", Observable.never)
 
         timed.run(events) should observe(Accept("timeout"))
       }
+    }
+  }
+
+  "Event observable closes early" - {
+    val upstreamClosure = "FSM upstreams closed"
+
+    "with no events flowing" in {
+      val early = Monitor[Int, String](0) {
+        case _ => {
+          case _ =>
+            Stop(Accept("empty"))
+        }
+      }
+      val events = Observable.empty[String]
+
+      early.run(events).map {
+        case Fail(reasons@_*) =>
+          Fail(reasons.head.take(upstreamClosure.length))
+        case notification: Notify =>
+          notification
+      } should observe(Fail(upstreamClosure))
+    }
+
+    "with at least one event that flows" in {
+      val early = Monitor[Int, String](0) {
+        case 0 => {
+          case Observe("1") =>
+            Goto(1)
+        }
+        case 1 => {
+          case _ =>
+            Stop(Accept("empty"))
+        }
+      }
+      val events = Observable("1")
+
+      early.run(events).map {
+        case Fail(reasons@_*) =>
+          Fail(reasons.head.take(upstreamClosure.length))
+        case notification: Notify =>
+          notification
+      } should observe(Fail(upstreamClosure))
     }
   }
 }

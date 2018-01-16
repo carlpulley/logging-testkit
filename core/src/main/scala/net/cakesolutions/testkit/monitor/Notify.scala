@@ -40,4 +40,8 @@ final case class Fail(reasons: String*) extends Exception with Notify {
   override def invert: Notify = {
     Accept(reasons: _*)
   }
+
+  override def toString: String = {
+    s"Fail(${reasons.mkString(", ")})"
+  }
 }

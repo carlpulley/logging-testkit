@@ -2,8 +2,6 @@ package akka.receive.pattern
 
 import akka.actor.Actor
 
-import net.cakesolutions.utils.ValueDiscard
-
 object ReceivePipeline {
   /**
     * Result returned by an interceptor PF to determine what/whether to delegate to the next inner interceptor
@@ -17,7 +15,7 @@ object ReceivePipeline {
       *
       * The block of code will be executed before similar blocks in outer interceptors.
       */
-    def andAfter(after: ⇒ Unit): Delegation = InnerAndAfter(transformedMsg, _ => after)
+    def andAfter(after: ⇒ Unit): Delegation = InnerAndAfter(transformedMsg, (_ ⇒ after))
   }
 
   private[ReceivePipeline] case class InnerAndAfter(transformedMsg: Any, after: Unit ⇒ Unit) extends Delegation
@@ -29,7 +27,7 @@ object ReceivePipeline {
     */
   case object HandledCompletely extends Delegation
 
-  private def withDefault(interceptor: Interceptor): Interceptor = interceptor.orElse({ case msg => Inner(msg) })
+  private def withDefault(interceptor: Interceptor): Interceptor = interceptor.orElse({ case msg ⇒ Inner(msg) })
 
   type Interceptor = PartialFunction[Any, Delegation]
 
@@ -88,9 +86,7 @@ trait ReceivePipeline extends Actor {
 
   private def toReceive(handler: Handler) = new Receive {
     def isDefinedAt(m: Any): Boolean = evaluate(m) != Undefined
-    def apply(m: Any): Unit = ValueDiscard[HandlerResult] {
-      evaluate(m)
-    }
+    def apply(m: Any): Unit = evaluate(m)
 
     override def applyOrElse[A1 <: Any, B1 >: Unit](m: A1, default: A1 ⇒ B1): B1 = {
       val result = handler(m)

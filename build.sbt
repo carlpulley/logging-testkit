@@ -30,6 +30,7 @@ lazy val core = project.in(file("core"))
       circe.parser,
       eff.core,
       eff.monix,
+      logback,
       monix.core,
       monix.reactive,
       pprint,

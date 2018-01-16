@@ -9,21 +9,27 @@ class NotifyTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChec
 
   import TestGenerators._
 
-  "Accept instances may be doubled inverted" in {
+  "Accept instances may be double inverted" in {
     forAll(acceptGen) { accept =>
       accept.invert.invert shouldEqual accept
     }
   }
 
-  "Fail instances may be doubled inverted" in {
+  "Fail instances may be double inverted" in {
     forAll(failGen) { fail =>
       fail.invert.invert shouldEqual fail
     }
   }
 
-  "Notify instances may be doubled inverted" in {
+  "Notify instances may be double inverted" in {
     forAll(notifyGen) { notify =>
       notify.invert.invert shouldEqual notify
+    }
+  }
+
+  "Fail instance have valid toString" in {
+    forAll(failGen) { fail =>
+      fail.toString shouldEqual s"Fail(${fail.reasons.mkString(", ")})"
     }
   }
 }

@@ -58,9 +58,9 @@ sealed abstract case class Monitor[IOState: ClassTag, Event] private(
     scheduler: Scheduler,
     log: Logger
   ): Observable[Notify] = {
-    val checker = system.actorOf(Props(new IOAutomata(initial, timeout, behaviour, sensor)))
-
     Observable.create(OverflowStrategy.Unbounded) { (sub: Subscriber[Notify]) =>
+      val checker = system.actorOf(Props(new IOAutomata(initial, timeout, behaviour, sensor)))
+
       checker ! Subscribe(sub)
 
       new Cancelable {
@@ -153,7 +153,7 @@ sealed abstract case class Monitor[IOState: ClassTag, Event] private(
       }
 
       override def onComplete(): Unit = {
-        log.debug(s"FSM Input Observer: onComplete()")
+        log.debug("FSM Input Observer: onComplete()")
         if (state.timeout.isDefined) {
           self ! StateTimeout
         }
@@ -278,8 +278,8 @@ sealed abstract case class Monitor[IOState: ClassTag, Event] private(
       }
     }
   }
-
 }
+
 object Monitor {
   /**
     * TODO:
