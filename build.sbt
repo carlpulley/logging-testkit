@@ -37,12 +37,7 @@ lazy val core = project.in(file("core"))
 lazy val docker = project.in(file("instrumentation/docker"))
   .dependsOn(core)
   .settings(
-    name := "logging-testkit-docker",
-    libraryDependencies ++= Seq(
-      circe.core,
-      circe.generic,
-      circe.parser
-    )
+    name := "logging-testkit-docker"
   )
 
 lazy val elasticsearch = project.in(file("instrumentation/elasticsearch"))
