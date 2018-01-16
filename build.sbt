@@ -1,7 +1,6 @@
 import Dependencies._
 import net.vonbuchholtz.sbt.dependencycheck.DependencyCheckPlugin
 
-addCompilerPlugin(Dependencies.kindProjection)
 enablePlugins(DependencyCheckPlugin)
 //enablePlugins(GhpagesPlugin)
 enablePlugins(GitBranchPrompt)
@@ -28,8 +27,6 @@ lazy val core = project.in(file("core"))
       circe.core,
       circe.generic,
       circe.parser,
-      eff.core,
-      eff.monix,
       logback,
       monix.core,
       monix.reactive,
