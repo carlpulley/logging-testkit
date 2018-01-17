@@ -9,7 +9,7 @@ jdk:
   - oraclejdk8
 
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION clean ^compile ^test:compile
-  - sbt ++$TRAVIS_SCALA_VERSION coverage ^test
+  - sbt ++$TRAVIS_SCALA_VERSION clean compile test:compile
+  - sbt ++$TRAVIS_SCALA_VERSION coverage test
   - sbt coverageReport
   - sbt coverageAggregate

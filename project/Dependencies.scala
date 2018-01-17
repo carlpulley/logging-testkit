@@ -22,7 +22,7 @@ object Dependencies {
   }
 
   object aws {
-    private val version = "1.11.263"
+    private val version = "1.11.265"
 
     val logs: ModuleID = "com.amazonaws" % "aws-java-sdk-logs" % version
   }
@@ -36,8 +36,7 @@ object Dependencies {
     val parser: ModuleID = "io.circe" %% "circe-parser" % version
   }
 
-  val config: ModuleID = "com.typesafe" % "config" % "1.3.1"
-
+  val config: ModuleID = "com.typesafe" % "config" % "1.3.2"
   val logback: ModuleID = "ch.qos.logback" % "logback-classic" % "1.2.3"
 
   object monix {
