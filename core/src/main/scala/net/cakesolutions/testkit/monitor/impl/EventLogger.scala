@@ -1,13 +1,11 @@
 package net.cakesolutions.testkit.monitor.impl
 
-import scala.reflect.ClassTag
-
 import akka.receive.pattern.ReceivePipeline
 import akka.receive.pattern.ReceivePipeline.Inner
 
 import net.cakesolutions.testkit.monitor.ObservedEvent
 
-private[monitor] abstract class EventLogger[IOState: ClassTag, Event] {
+private[monitor] trait EventLogger[IOState, Event] {
   this: ReceivePipeline =>
 
   import IOAutomata._

@@ -26,10 +26,10 @@ private[monitor] class IOAutomata[IOState: ClassTag, Event](
   sensor: Observable[Event]
 )(implicit scheduler: Scheduler,
   log: Logger
-) extends EventLogger[IOState, Event]
+) extends Actor
   with ReceivePipeline
   with SubscriberHandling
-  with Actor {
+  with EventLogger[IOState, Event] {
 
   import IOAutomata._
 
