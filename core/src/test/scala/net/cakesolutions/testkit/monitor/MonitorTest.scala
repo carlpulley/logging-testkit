@@ -52,7 +52,7 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
       }
       val events = Observable("1", "2", "3")
 
-      simple.run(events) should observe(Accept("goto-1"), Accept("stay"), Accept("stop"))
+      simple.run(events).dump("DEBUGGY") should observe(Accept("goto-1"), Accept("stay"), Accept("stop"))
     }
   }
 
