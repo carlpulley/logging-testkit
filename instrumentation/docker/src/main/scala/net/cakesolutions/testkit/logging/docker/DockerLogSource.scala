@@ -2,118 +2,61 @@
 
 package net.cakesolutions.testkit.logging.docker
 
-import java.time.format.DateTimeFormatter
-import java.time.{ZoneOffset, ZonedDateTime}
-
-import scala.concurrent.{Promise, blocking}
+import scala.concurrent.{blocking, Promise}
 import scala.sys.process.{Process, ProcessLogger}
 import scala.util.control.NonFatal
-import scala.util.{Failure, Success, Try}
 
-import akka.event.slf4j.Logger
-import io.circe.{DecodingFailure, Json}
+import com.typesafe.scalalogging.Logger
+import io.circe.Json
 import io.circe.parser._
-import monix.execution.{Cancelable, Scheduler}
-import monix.reactive.{Observable, OverflowStrategy}
+import monix.execution.Scheduler
+import monix.reactive.observers.Subscriber
 
 import net.cakesolutions.testkit.logging.{LogEvent, LoggingSource}
+import net.cakesolutions.testkit.logging.docker.formats.LogEventFormat
 
 object DockerLogSource extends LoggingSource[Json] {
+
+  private val log = Logger("LoggingTestkit")
   private val dockerLogsCmd = Seq("docker", "logs", "-f", "-t")
-  private val log = Logger("ApplicationLog")
 
-  def source(id: String)(implicit scheduler: Scheduler): Observable[LogEvent[Json]] =
-    Observable.create[LogEvent[Json]](OverflowStrategy.Unbounded) { subscriber =>
-      val cancelP = Promise[Unit]
+  final case class ProcessTerminated(exitCode: Int) extends Exception(s"ProcessTerminated($exitCode)")
 
-      try {
-        scheduler.execute(new Runnable {
-          def run(): Unit = {
-            val handleLogEvent: String => Unit = { event =>
-              if (! cancelP.isCompleted) {
-                event.toLogEvent(id) match {
-                  case Success(value: LogEvent[Json]) =>
-                    try {
-                      subscriber.onNext(value)
-                    } catch {
-                      case exn: Throwable =>
-                        exn.printStackTrace()
-                    }
-                  case Failure(exn) =>
-                    subscriber.onError(exn)
-                }
-              }
+  /** @inheritdoc */
+  override protected def subscriberPolling(id: String, subscriber: Subscriber[LogEvent[Json]], cancelP: Promise[Unit])(implicit scheduler: Scheduler): Unit = {
+    val decoder = new LogEventFormat(id)
+    import decoder._
+
+    val handleLogEvent: String => Unit = { event =>
+      if (! cancelP.isCompleted) {
+        decode[LogEvent[Json]](event) match {
+          case Right(value: LogEvent[Json]) =>
+            try {
+              subscriber.onNext(value)
+            } catch {
+              case NonFatal(exn) =>
+                log.error("Unexpected exception sending data to a subscriber", exn)
             }
-
-            blocking {
-              val process = Process(dockerLogsCmd :+ id).run(ProcessLogger(handleLogEvent, handleLogEvent))
-
-              cancelP.future.onComplete(_ => process.destroy())(scheduler)
-
-              // 143 = 128 + SIGTERM
-              val exit = process.exitValue()
-              if (exit != 0 && exit != 143) {
-                throw new RuntimeException(s"Logging exited with value $exit")
-              }
-              if (! cancelP.isCompleted) {
-                cancelP.success(())
-                subscriber.onComplete()
-              }
-            }
-          }
-        })
-      } catch {
-        case NonFatal(exn) =>
-          log.error("Log parsing error", exn)
-          if (! cancelP.isCompleted) {
-            cancelP.failure(exn)
+          case Left(exn) =>
             subscriber.onError(exn)
-          }
-      }
-
-      new Cancelable {
-        override def cancel(): Unit = {
-          if (! cancelP.isCompleted) {
-            cancelP.success(())
-            subscriber.onComplete()
-          }
         }
       }
     }
 
-  private implicit class EitherHelper[A <: Throwable, B](either: Either[A, B]) {
-    def toTry: Try[B] = either match {
-      case Right(value) =>
-        Success(value)
-      case Left(exn) =>
-        Failure(exn)
-    }
-  }
+    blocking {
+      val process = Process(dockerLogsCmd :+ id).run(ProcessLogger(handleLogEvent, handleLogEvent))
 
-  private implicit class LogEventHelper(rawLine: String) {
-    def toLogEvent(id: String): Try[LogEvent[Json]] = Try {
-      val line = rawLine.trim
-      log.debug(s"$id $line")
+      cancelP.future.onComplete(_ => process.destroy())(scheduler)
 
-      if (line.nonEmpty) {
-        // 2016-06-11T10:10:00.154101534Z log-message
-        val logLineRE = "^\\s*(\\d+\\-\\d+\\-\\d+T\\d+:\\d+:\\d+\\.\\d+Z)\\s+(.*)\\s*\\z".r
-        val logLineMatch = logLineRE.findFirstMatchIn(line)
-
-        if (logLineMatch.isDefined) {
-          val time = logLineMatch.get.group(1)
-          val message = logLineMatch.get.group(2).trim
-          for {
-            json <- parse(message).toTry
-          } yield LogEvent[Json](ZonedDateTime.parse(time, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.nnnnnnnnnX")), id, json)
-        } else {
-          for {
-            json <- parse(line).toTry
-          } yield LogEvent[Json](ZonedDateTime.now(ZoneOffset.UTC), id, json)
-        }
-      } else {
-        Failure[LogEvent[Json]](DecodingFailure("", List()))
+      // 143 = 128 + SIGTERM
+      val exit = process.exitValue()
+      if (exit != 0 && exit != 143) {
+        throw ProcessTerminated(exit) // FIXME: really?
       }
-    }.flatten
+      if (! cancelP.isCompleted) {
+        cancelP.success(())
+        subscriber.onComplete()
+      }
+    }
   }
 }

@@ -4,8 +4,7 @@ package net.cakesolutions.testkit.monitor
 
 import scala.concurrent.duration._
 
-import akka.actor.ActorSystem
-import monix.execution.Scheduler
+import monix.execution.Scheduler.Implicits.global
 import monix.reactive.Observable
 import org.scalatest.{FreeSpec, Matchers}
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
@@ -15,14 +14,14 @@ import net.cakesolutions.testkit.matchers.ObservableMatcher._
 
 class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks {
 
-  implicit val system: ActorSystem = ActorSystem("MonitorTest")
-  implicit val scheduler: Scheduler = Scheduler(system.dispatcher)
+  import Interactions._
+
   implicit val logger: Logger = LoggerFactory.getLogger(getClass)
   implicit val timeout: FiniteDuration = 3.seconds
 
   "Simple finite state machine" - {
     "with no notifications" in {
-      val simple = Monitor[Int, String](0) {
+      val simple: Behaviour[Int, String] = {
         case 0 => {
           case Observe("1") =>
             Goto(1)
@@ -34,11 +33,11 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
       }
       val events = Observable("1", "2")
 
-      simple.run(events) should observe(Accept("stop"))
+      events.monitor(0)(simple) should observe[ActionOut[Notify]](Observe(Accept("stop")))
     }
 
     "with notifications" in {
-      val simple = Monitor[Int, String](0) {
+      val simple: Behaviour[Int, String] = {
         case 0 => {
           case Observe("1") =>
             Goto(1, Accept("goto-1"))
@@ -52,14 +51,14 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
       }
       val events = Observable("1", "2", "3")
 
-      simple.run(events).dump("DEBUGGY") should observe(Accept("goto-1"), Accept("stay"), Accept("stop"))
+      events.monitor(0)(simple) should observe[ActionOut[Notify]](Observe(Accept("goto-1")), Observe(Accept("stay")), Observe(Accept("stop")))
     }
   }
 
   "Timed state machine" - {
     "with no notifications" - {
       "and no timeouts" in {
-        val timed = Monitor[Int, String](0, 1.second) {
+        val timed: Behaviour[Int, String] = {
           case 0 => {
             case Observe("1") =>
               Goto(1, 1.second)
@@ -71,23 +70,23 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
         }
         val events = Observable("1", "2")
 
-        timed.run(events) should observe(Accept("stop"))
+        events.monitor(0, initialTimeout = Some(1.second))(timed) should observe[ActionOut[Notify]](Observe(Accept("stop")))
       }
 
       "and with timeouts (global timeout)" in {
-        val timed = Monitor[Int, String](0, 1.second) {
+        val timed: Behaviour[Int, String] = {
           case 0 => {
             case StateTimeout =>
               Stop(Accept("timeout"))
           }
         }
-        val events = Observable.never
+        val events = Observable.never[String]
 
-        timed.run(events) should observe(Accept("timeout"))
+        events.monitor(0, initialTimeout = Some(1.second))(timed) should observe[ActionOut[Notify]](Observe(Accept("timeout")))
       }
 
       "and with timeouts (state timeout)" in {
-        val timed = Monitor[Int, String](0, 1.second) {
+        val timed: Behaviour[Int, String] = {
           case 0 => {
             case Observe("1") =>
               Goto(1, 1.second)
@@ -99,13 +98,13 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
         }
         val events = Observable.cons("1", Observable.never)
 
-        timed.run(events) should observe(Accept("timeout"))
+        events.monitor(0, initialTimeout = Some(1.second))(timed) should observe[ActionOut[Notify]](Observe(Accept("timeout")))
       }
     }
 
     "with notifications" - {
       "and no timeouts" in {
-        val timed = Monitor[Int, String](0, 1.second) {
+        val timed: Behaviour[Int, String] = {
           case 0 => {
             case Observe("1") =>
               Goto(1, 1.second, Accept("goto-1"))
@@ -117,11 +116,11 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
         }
         val events = Observable("1", "2")
 
-        timed.run(events) should observe(Accept("goto-1"), Accept("stop"))
+        events.monitor(0, initialTimeout = Some(1.second))(timed) should observe[ActionOut[Notify]](Observe(Accept("goto-1")), Observe(Accept("stop")))
       }
 
       "and with timeouts" in {
-        val timed = Monitor[Int, String](0, 1.second) {
+        val timed: Behaviour[Int, String] = {
           case 0 => {
             case Observe("1") =>
               Goto(1, 1.second)
@@ -133,16 +132,15 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
         }
         val events = Observable.cons("1", Observable.never)
 
-        timed.run(events) should observe(Accept("timeout"))
+        events.monitor(0, initialTimeout = Some(1.second))(timed) should observe[ActionOut[Notify]](Observe(Accept("timeout")))
       }
     }
   }
 
+  // FIXME: surely we should be able to classify failure modes here?
   "Event observable closes early" - {
-    val upstreamClosure = "FSM upstreams closed"
-
     "with no events flowing" in {
-      val early = Monitor[Int, String](0) {
+      val early: Behaviour[Int, String] = {
         case _ => {
           case _ =>
             Stop(Accept("empty"))
@@ -150,16 +148,11 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
       }
       val events = Observable.empty[String]
 
-      early.run(events).map {
-        case Fail(reasons@_*) =>
-          Fail(reasons.head.take(upstreamClosure.length))
-        case notification: Notify =>
-          notification
-      } should observe(Fail(upstreamClosure))
+      events.monitor(0)(early) should observe[ActionOut[Notify]]()
     }
 
     "with at least one event that flows" in {
-      val early = Monitor[Int, String](0) {
+      val early: Behaviour[Int, String] = {
         case 0 => {
           case Observe("1") =>
             Goto(1)
@@ -171,12 +164,7 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
       }
       val events = Observable("1")
 
-      early.run(events).map {
-        case Fail(reasons@_*) =>
-          Fail(reasons.head.take(upstreamClosure.length))
-        case notification: Notify =>
-          notification
-      } should observe(Fail(upstreamClosure))
+      events.monitor(0)(early) should observe[ActionOut[Notify]]()
     }
   }
 }

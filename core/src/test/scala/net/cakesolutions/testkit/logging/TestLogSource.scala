@@ -2,13 +2,23 @@
 
 package net.cakesolutions.testkit.logging
 
+import scala.concurrent.Promise
+
 import io.circe.Json
-import monix.execution.Scheduler
+import monix.execution.{Cancelable, Scheduler}
 import monix.reactive.Observable
+import monix.reactive.observers.Subscriber
 
-class TestLogSource(logEvents: LogEvent[Json]*) extends LoggingSource[Json] {
+import net.cakesolutions.utils.ValueDiscard
 
-  def source(id: String)(implicit scheduler: Scheduler): Observable[LogEvent[Json]] = {
-    Observable(logEvents: _*)
+class TestLogSource(testData: Observable[LogEvent[Json]]) extends LoggingSource[Json] {
+
+  /** @inheritdoc*/
+  override protected def subscriberPolling(id: String, subscriber: Subscriber[LogEvent[Json]], cancelP: Promise[Unit])(implicit scheduler: Scheduler): Unit = {
+    ValueDiscard[Cancelable] {
+      testData
+        .doOnComplete(() => cancelP.success(()))
+        .subscribe(subscriber)
+    }
   }
 }

@@ -38,6 +38,7 @@ object Dependencies {
 
   val config: ModuleID = "com.typesafe" % "config" % "1.3.2"
   val logback: ModuleID = "ch.qos.logback" % "logback-classic" % "1.2.3"
+  val logging: ModuleID = "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
 
   object monix {
     private val version = "3.0.0-668a8b9"

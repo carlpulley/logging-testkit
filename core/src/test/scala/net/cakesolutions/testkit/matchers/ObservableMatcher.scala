@@ -8,19 +8,19 @@ import scala.concurrent._
 import scala.concurrent.duration._
 
 import monix.execution.Scheduler
-import monix.reactive.Observable
+import monix.execution.exceptions.UpstreamTimeoutException
+import monix.reactive.{Notification, Observable}
 import monix.reactive.Notification.{OnComplete, OnError, OnNext}
-import net.cakesolutions.testkit.monitor.Notify
 import org.scalatest.matchers.{Matcher, MatchResult}
 
-private final case class TestFailed(n: Int, action: Notify) extends Exception
+private final case class TestFailed[Action](n: Int, action: Action) extends Exception
 private final case class ObservableError(n: Int, cause: Throwable) extends Exception
 private final case class ObservableClosed(n: Int) extends Exception
 
 object ObservableMatcher {
 
-  def observe(actions: Notify*)(implicit scheduler: Scheduler, timeout: FiniteDuration) = new Matcher[Observable[Notify]] {
-    def apply(obs: Observable[Notify]): MatchResult = {
+  def observe[Action](actions: Action*)(implicit scheduler: Scheduler, timeout: FiniteDuration) = new Matcher[Observable[Action]] {
+    def apply(obs: Observable[Action]): MatchResult = {
       val result = Promise[Unit]
 
       if (actions.isEmpty) {
@@ -30,32 +30,27 @@ object ObservableMatcher {
           .timeoutOnSlowUpstream(timeout + 1.second)
           .materialize
           .scan[Option[Int]](Some(0)) {
-            case data =>
-              if (result.isCompleted) {
-                None
-              } else {
-                data match {
-                  case (Some(n), OnNext(_)) if n < 0 || n >= actions.length =>
-                    result.failure(ObservableError(n, new IndexOutOfBoundsException))
-                    None
-                  case (Some(n), OnNext(act)) if actions(n) == act =>
-                    Some(n + 1)
-                  case (Some(n), OnNext(act)) =>
-                    result.failure(TestFailed(n, act))
-                    None
-                  case (Some(n), OnError(exn)) =>
-                    result.failure(ObservableError(n, exn))
-                    None
-                  case (Some(n), OnComplete) if actions.length == n =>
-                    result.success(())
-                    None
-                  case (Some(n), OnComplete) =>
-                    result.failure(ObservableClosed(n))
-                    None
-                  case _ =>
-                    None
-                }
-              }
+            case _: (Option[Int], Notification[Action]) if result.isCompleted =>
+              None
+            case (Some(n), OnNext(_)) if n < 0 || n >= actions.length =>
+              result.failure(ObservableError(n, new IndexOutOfBoundsException))
+              None
+            case (Some(n), OnNext(act)) if actions(n) == act =>
+              Some(n + 1)
+            case (Some(n), OnNext(act)) =>
+              result.failure(TestFailed[Action](n, act))
+              None
+            case (Some(n), OnError(exn)) =>
+              result.failure(ObservableError(n, exn))
+              None
+            case (Some(n), OnComplete) if actions.length == n =>
+              result.success(())
+              None
+            case (Some(n), OnComplete) =>
+              result.failure(ObservableClosed(n))
+              None
+            case _ =>
+              None
           }
           .subscribe()
       }
@@ -72,6 +67,9 @@ object ObservableMatcher {
           MatchResult(matches = false, errMsg, errMsg)
         case ObservableError(n, cause: IndexOutOfBoundsException) if actions.length >= n =>
           val errMsg = s"Observable emitted an unexpected exception $cause at list index $n (list contained ${actions.length} members!)"
+          MatchResult(matches = false, errMsg, errMsg)
+        case ObservableError(n, _: UpstreamTimeoutException) =>
+          val errMsg = s"After ${timeout + 1.second} failed to observe any events flowing for matching"
           MatchResult(matches = false, errMsg, errMsg)
         case ObservableError(0, cause) =>
           val errMsg = s"Observable emitted an unexpected exception $cause - expected ${actions(0)}"

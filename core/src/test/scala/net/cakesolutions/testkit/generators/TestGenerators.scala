@@ -1,12 +1,20 @@
 // Copyright 2018 Carl Pulley
 
-package net.cakesolutions.testkit.monitor
+package net.cakesolutions.testkit.generators
 
 import scala.concurrent.duration.Duration
 
+import io.circe.Json
 import org.scalacheck.Gen
 
+import net.cakesolutions.testkit.logging.LogEvent
+import net.cakesolutions.testkit.monitor._
+
 object TestGenerators {
+
+  import Interactions._
+  import JsonGenerators._
+  import ZonedDateTimeGenerator._
 
   val acceptGen: Gen[Notify] = for {
     failures <- Gen.listOf(Gen.alphaNumStr)
@@ -43,12 +51,12 @@ object TestGenerators {
 
   val stateTimeoutGen: Gen[StateTimeout.type] = Gen.const(StateTimeout)
 
-  def observeGen[E](eventGen: Gen[E]): Gen[Observe[E]] = for {
+  def eventInGen[E](eventGen: Gen[E]): Gen[EventIn[E]] = for {
     event <- eventGen
   } yield Observe[E](event)
 
-  def observedEventGen[E](eventGen: Gen[E]): Gen[ObservedEvent[E]] = Gen.frequency(
-    1 -> stateTimeoutGen,
-    9 -> observeGen[E](eventGen)
-  )
+  def logEventGen(id: String = "test"): Gen[LogEvent[Json]] = for {
+    time <- zonedDateTimeGen
+    json <- jsonGen
+  } yield LogEvent(time, id, json)
 }

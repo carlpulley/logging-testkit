@@ -7,7 +7,7 @@ import org.scalatest.{FreeSpec, Matchers}
 
 class NotifyTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChecks {
 
-  import TestGenerators._
+  import net.cakesolutions.testkit.generators.TestGenerators._
 
   "Accept instances may be double inverted" in {
     forAll(acceptGen) { accept =>
@@ -29,7 +29,7 @@ class NotifyTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChec
 
   "Fail instance have valid toString" in {
     forAll(failGen) { fail =>
-      fail.toString shouldEqual s"Fail(${fail.reasons.mkString(", ")})"
+      fail.toString shouldEqual s"net.cakesolutions.testkit.monitor.Fail: ${fail.reasons.mkString(", ")}"
     }
   }
 }

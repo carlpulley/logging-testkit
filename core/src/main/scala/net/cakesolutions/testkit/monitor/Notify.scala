@@ -36,12 +36,8 @@ final case class Accept(failures: String*) extends Notify {
   *
   * @param reasons
   */
-final case class Fail(reasons: String*) extends Exception with Notify {
+final case class Fail(reasons: String*) extends Exception(reasons.mkString(", ")) with Notify {
   override def invert: Notify = {
     Accept(reasons: _*)
-  }
-
-  override def toString: String = {
-    s"Fail(${reasons.mkString(", ")})"
   }
 }
