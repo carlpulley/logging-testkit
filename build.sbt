@@ -28,18 +28,20 @@ lazy val core = project.in(file("core"))
       scalatest % Test,
       scalacheck % Test
     ),
-    coverageMinimum := 65
+    coverageMinimum := 60
   )
 
 lazy val docker = project.in(file("instrumentation/docker"))
   .dependsOn(core % "compile->compile; test->test")
   .settings(
-    name := "logging-testkit-docker"
+    name := "logging-testkit-docker",
+    coverageMinimum := 0
   )
 
 lazy val elasticsearch = project.in(file("instrumentation/elasticsearch"))
   .dependsOn(core % "compile->compile; test->test")
   .settings(
     name := "logging-testkit-elasticsearch",
-    libraryDependencies += aws.logs
+    libraryDependencies += aws.logs,
+    coverageMinimum := 0
   )
