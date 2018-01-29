@@ -4,6 +4,7 @@ package net.cakesolutions.testkit
 
 import scala.concurrent.duration._
 
+import com.typesafe.scalalogging.Logger
 import monix.reactive.Observable
 import monix.reactive.Notification.{OnComplete, OnError, OnNext}
 
@@ -49,6 +50,7 @@ package object monitor {
       transition: Behaviour[IOState, Event]
     ): Observable[ActionOut[Notify]] = {
       Observable.merge[EventInternal[Event]](upstream.asEventInternal, clock)
+        .debugLog("IN")
         .materialize
         .scan[MonitorState[IOState]](RunningState(initialState).timeout(initialTimeout).overall(overallTimeout)) {
           case (current: RunningState[IOState], OnNext(event: Observe[Event]))
@@ -89,6 +91,7 @@ package object monitor {
             state.actions
         }
         .dematerialize
+        .debugLog("OUT")
     }
 
     private def next(transition: Behaviour[IOState, Event])(state: IOState, event: EventIn[Event]): MonitorState[IOState] = {
@@ -112,6 +115,20 @@ package object monitor {
   }
 
   private implicit class EventInMap[Event](upstream: Observable[Event]) {
+    private val logger = Logger("LoggingTestkit")
+
+    def debugLog(tag: String): Observable[Event] = {
+      upstream
+        .materialize
+        .zipWithIndex
+        .map {
+          case (event, index) =>
+            logger.debug(s"$tag-$index: ${event.toString}")
+            event
+        }
+        .dematerialize
+    }
+
     def asEventInternal: Observable[EventInternal[Event]] = {
       upstream.map { event: Event =>
           Observe(event)

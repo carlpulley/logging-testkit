@@ -103,7 +103,7 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
     }
 
     "with notifications" - {
-      "and no timeouts" in {
+      "and no state or monitor timeouts" in {
         val timed: Behaviour[Int, String] = {
           case 0 => {
             case Observe("1") =>
@@ -119,7 +119,7 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
         events.monitor(0, initialTimeout = Some(1.second))(timed) should observe[ActionOut[Notify]](Observe(Accept("goto-1")), Observe(Accept("stop")))
       }
 
-      "and with timeouts" in {
+      "and with state timeouts and no monitor timeouts" in {
         val timed: Behaviour[Int, String] = {
           case 0 => {
             case Observe("1") =>
@@ -133,6 +133,22 @@ class MonitorTest extends FreeSpec with Matchers with GeneratorDrivenPropertyChe
         val events = Observable.cons("1", Observable.never)
 
         events.monitor(0, initialTimeout = Some(1.second))(timed) should observe[ActionOut[Notify]](Observe(Accept("timeout")))
+      }
+
+      "and with monitor timeouts and no state timeouts" in {
+        val timed: Behaviour[Int, String] = {
+          case 0 => {
+            case Observe("1") =>
+              Goto(1)
+          }
+          case 1 => {
+            case MonitorTimeout =>
+              Stop(Accept("timeout"))
+          }
+        }
+        val events = Observable.cons("1", Observable.never)
+
+        events.monitor(0, overallTimeout = Some(1.second))(timed) should observe[ActionOut[Notify]](Observe(Accept("timeout")))
       }
     }
   }
